@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Tickets - Recursos Físicos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>Sistema de Tickets - Recursos Físicos</h1>
+    </div>
+    <nav>
+        <button class="tab-btn active" onclick="switchTab('tab-nuevo')">Nuevo Ticket</button>
+        <button class="tab-btn" onclick="switchTab('tab-gestion')">Panel de Gestión</button>
+        <button class="tab-btn" onclick="switchTab('tab-reportes')">Reportes</button>
+    </nav>
+</header>
+
+<div class="container">
+
+    <!-- PESTAÑA: NUEVO TICKET -->
+    <div id="tab-nuevo" class="tab-content active">
+        <div class="card">
+            <h2>Ingresar Solicitud</h2>
+            
+            <div class="form-row">
+                <div class="input-group">
+                    <label for="tipo">Tipo de Requerimiento</label>
+                    <select id="tipo">
+                        <option value="Mantención">Mantención</option>
+                        <option value="Reparación">Reparación</option>
+                        <option value="Apoyo Operativo">Apoyo Operativo</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label for="ubicacion">Ubicación / Unidad</label>
+                    <input type="text" id="ubicacion" placeholder="Ej: Urgencias, Sala 4">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="titulo">Título del problema</label>
+                <input type="text" id="titulo" placeholder="Ej: Fuga de agua en el baño">
+            </div>
+            
+            <div class="input-group">
+                <label for="descripcion">Descripción detallada</label>
+                <textarea id="descripcion" placeholder="Describe la situación exacta..."></textarea>
+            </div>
+            
+            <button onclick="crearTicket()">Generar Ticket</button>
+        </div>
+    </div>
+
+    <!-- PESTAÑA: PANEL DE GESTIÓN -->
+    <div id="tab-gestion" class="tab-content">
+        <div class="card">
+            <h2>Tickets Activos</h2>
+            <div id="lista-tickets">
+                <!-- Se llenará vía JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA: REPORTES -->
+    <div id="tab-reportes" class="tab-content">
+        <div class="card">
+            <h2>Indicadores de Gestión</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Ingresados</div>
+                    <div class="stat-value" id="stat-total">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">En Ejecución</div>
+                    <div class="stat-value" id="stat-proceso">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Resueltos</div>
+                    <div class="stat-value" id="stat-resueltos">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL DE GESTIÓN DE TICKET -->
+<div class="modal-overlay" id="modal-ticket">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modal-titulo">Detalle del Ticket #<span id="modal-id"></span></h3>
+            <button class="close-modal" onclick="cerrarModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex; gap: 10px; margin-bottom: 20px;">
+                <span class="badge" id="modal-urgencia-badge"></span>
+                <span class="status-badge" id="modal-estado-badge"></span>
+            </div>
+            
+            <p><strong>Ubicación:</strong> <span id="modal-ubicacion"></span> | <strong>Tipo:</strong> <span id="modal-tipo"></span></p>
+            <p><strong>Descripción:</strong> <span id="modal-desc"></span></p>
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label for="modal-estado">Cambiar Estado</label>
+                    <select id="modal-estado">
+                        <option value="Ingresado">Ingresado</option>
+                        <option value="En Revisión">En Revisión</option>
+                        <option value="Asignado">Asignado</option>
+                        <option value="En Ejecución">En Ejecución</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Resuelto">Resuelto</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="modal-responsable">Personal Responsable</label>
+                    <input type="text" id="modal-responsable" placeholder="Nombre del técnico">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="modal-observacion">Añadir Avance u Observación</label>
+                <textarea id="modal-observacion" rows="2" placeholder="Ej: Se inspeccionó y falta repuesto..."></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label for="modal-recursos">Recursos / Materiales Utilizados</label>
+                <input type="text" id="modal-recursos" placeholder="Ej: 1x tubo PVC 40mm, Silicona">
+            </div>
+
+            <div class="history-log" id="modal-historial">
+                <!-- Historial via JS -->
+            </div>
+
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+            <button onclick="guardarEdicion()">Guardar Cambios</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- ALMACENAMIENTO (LOCALSTORAGE) ---
+let tickets = JSON.parse(localStorage.getItem('hrr_tickets')) || [];
+let ticketActualEditando = null;
+
+// --- NAVEGACIÓN SPA ---
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    event.currentTarget.classList.add('active');
+
+    if(tabId === 'tab-gestion') renderTickets();
+    if(tabId === 'tab-reportes') renderReportes();
+}
+
+// --- LOGICA IA URGENCIA ---
+function analizarUrgencia(texto) {
+    texto = texto.toLowerCase();
+    const palabrasAlta = ["urgente", "emergencia", "fuga", "grave", "inmediato", "riesgo", "peligro", "roto", "inundación", "inundacion", "cortocircuito", "accidente", "crítico", "critico", "inoperativo", "caído", "caida", "explosión", "fuego", "incendio", "colapso", "vital", "salud", "riesgo vital"];
+    const palabrasMedia = ["problema", "falla", "revisar", "lento", "detalle", "intermitente", "error", "advertencia", "mantenimiento", "ruido", "reparación", "reparacion", "desperfecto", "molestia", "parcial", "sucio", "limpieza"];
+
+    let scoreAlta = 0, scoreMedia = 0;
+    const contiene = (t, p) => new RegExp('\\b' + p + '\\b', 'i').test(t);
+
+    for (let p of palabrasAlta) if (contiene(texto, p) || texto.includes(p)) scoreAlta++;
+    for (let p of palabrasMedia) if (contiene(texto, p) || texto.includes(p)) scoreMedia++;
+
+    if (scoreAlta > 0) return "Alta";
+    if (scoreMedia > 0 || texto.length > 200) return "Media";
+    return "Baja";
+}
+
+// --- CREAR TICKET ---
+function crearTicket() {
+    const titulo = document.getElementById("titulo").value.trim();
+    const descripcion = document.getElementById("descripcion").value.trim();
+    const tipo = document.getElementById("tipo").value;
+    const ubicacion = document.getElementById("ubicacion").value.trim();
+
+    if (!titulo || !ubicacion) return alert("El título y la ubicación son obligatorios.");
+
+    const urgencia = analizarUrgencia(titulo + " " + descripcion);
+    const fecha = new Date().toLocaleString('es-ES');
+
+    const nuevoTicket = {
+        id: Date.now().toString().slice(-6), // ID simple de 6 digitos
+        titulo,
+        descripcion,
+        tipo,
+        ubicacion,
+        urgencia,
+        estado: "Ingresado",
+        responsable: "",
+        recursos: "",
+        fechaCreacion: fecha,
+        historial: [`${fecha} - Ticket Creado.`]
+    };
+
+    tickets.unshift(nuevoTicket);
+    localStorage.setItem('hrr_tickets', JSON.stringify(tickets));
+
+    // Limpiar form
+    document.getElementById("titulo").value = "";
+    document.getElementById("descripcion").value = "";
+    document.getElementById("ubicacion").value = "";
+
+    alert("Ticket generado con éxito.");
+    switchTab('tab-gestion'); // ir a gestión
+    
+    // Activar visualmente la pestaña
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-btn')[1].classList.add('active'); // Botón Gestión
+}
+
+// --- RENDERIZAR LISTA ---
+function renderTickets() {
+    const lista = document.getElementById("lista-tickets");
+    lista.innerHTML = "";
+
+    if (tickets.length === 0) {
+        lista.innerHTML = `<div style="text-align:center; color:#6b7280; padding:20px;">No hay tickets registrados.</div>`;
+        return;
+    }
+
+    tickets.forEach(t => {
+        let claseUrg = t.urgencia.toLowerCase();
+        let claseEst = t.estado.toLowerCase().replace(" ", "").replace("ó","o").replace("é","e");
+        
+        lista.innerHTML += `
+        <div class="ticket urg-${claseUrg}" onclick="abrirModal('${t.id}')">
+            <div class="ticket-header">
+                <div class="ticket-title">#${t.id} - ${t.titulo}</div>
+                <div class="ticket-badges">
+                    <span class="badge ${claseUrg}">${t.urgencia}</span>
+                    <span class="status-badge status-${claseEst}">${t.estado}</span>
+                </div>
+            </div>
+            <div class="ticket-info">
+                <strong>Ubicación:</strong> ${t.ubicacion} | <strong>Tipo:</strong> ${t.tipo}
+            </div>
+            <div class="ticket-footer">
+                <span>Ingresado: ${t.fechaCreacion.split(',')[0]}</span>
+                <span>Resp: ${t.responsable || 'No asignado'}</span>
+            </div>
+        </div>
+        `;
+    });
+}
+
+// --- MODAL Y EDICIÓN ---
+function abrirModal(id) {
+    const t = tickets.find(x => x.id === id);
+    if(!t) return;
+    
+    ticketActualEditando = id;
+    
+    document.getElementById("modal-id").textContent = t.id;
+    // Eliminamos html inyectable para evitar XSS básico (aunque sea local)
+    document.getElementById("modal-titulo").textContent = `Detalle del Ticket #${t.id} - ${t.titulo}`;
+    document.getElementById("modal-ubicacion").textContent = t.ubicacion;
+    document.getElementById("modal-tipo").textContent = t.tipo;
+    document.getElementById("modal-desc").textContent = t.descripcion || "Sin descripción.";
+    
+    let badgeUrg = document.getElementById("modal-urgencia-badge");
+    badgeUrg.className = `badge ${t.urgencia.toLowerCase()}`;
+    badgeUrg.textContent = `Urgencia: ${t.urgencia}`;
+    
+    let claseEst = t.estado.toLowerCase().replace(" ", "").replace("ó","o").replace("é","e");
+    let badgeEst = document.getElementById("modal-estado-badge");
+    badgeEst.className = `status-badge status-${claseEst}`;
+    badgeEst.textContent = t.estado;
+
+    // Form fields
+    document.getElementById("modal-estado").value = t.estado;
+    document.getElementById("modal-responsable").value = t.responsable;
+    document.getElementById("modal-observacion").value = "";
+    document.getElementById("modal-recursos").value = t.recursos;
+
+    // Historial
+    const histHtml = t.historial.map(h => `<div class="history-entry">${h}</div>`).join('');
+    document.getElementById("modal-historial").innerHTML = histHtml;
+
+    document.getElementById("modal-ticket").classList.add("active");
+}
+
+function cerrarModal() {
+    document.getElementById("modal-ticket").classList.remove("active");
+    ticketActualEditando = null;
+}
+
+function guardarEdicion() {
+    const tIndex = tickets.findIndex(x => x.id === ticketActualEditando);
+    if(tIndex === -1) return;
+    
+    const t = tickets[tIndex];
+    const nEstado = document.getElementById("modal-estado").value;
+    const nResp = document.getElementById("modal-responsable").value.trim();
+    const obs = document.getElementById("modal-observacion").value.trim();
+    const rec = document.getElementById("modal-recursos").value.trim();
+    const fecha = new Date().toLocaleString('es-ES');
+
+    let cambios = [];
+    if(t.estado !== nEstado) cambios.push(`Estado pasó a "${nEstado}"`);
+    if(t.responsable !== nResp && nResp) cambios.push(`Asignado a "${nResp}"`);
+    if(t.recursos !== rec && rec) cambios.push(`Recursos actualizados`);
+    if(obs) cambios.push(`Nota: ${obs}`);
+
+    if(cambios.length > 0) {
+        t.estado = nEstado;
+        t.responsable = nResp;
+        t.recursos = rec;
+        t.historial.unshift(`${fecha} - ${cambios.join(' | ')}`); // unshift para ver lo nuevo arriba
+        
+        localStorage.setItem('hrr_tickets', JSON.stringify(tickets));
+        renderTickets();
+    }
+    cerrarModal();
+}
+
+// --- REPORTES ---
+function renderReportes() {
+    document.getElementById("stat-total").textContent = tickets.length;
+    
+    const resueltos = tickets.filter(t => t.estado === "Resuelto").length;
+    document.getElementById("stat-resueltos").textContent = resueltos;
+    
+    const enProceso = tickets.filter(t => t.estado === "En Ejecución" || t.estado === "Asignado" || t.estado === "En Revisión").length;
+    document.getElementById("stat-proceso").textContent = enProceso;
+}
+
+// Inicializar
+renderTickets();
+</script>
+
+</body>
+</html>
