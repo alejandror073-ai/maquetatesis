@@ -9,13 +9,17 @@
 <body>
 
 <header>
-    <div class="header-content">
+    <div class="header-content" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <h1>Sistema de Tickets - Recursos Físicos</h1>
+        <div style="background: rgba(255,255,255,0.15); padding: 5px 15px; border-radius: 5px; font-size: 14px; display: flex; align-items: center; gap: 10px;">
+            <span style="color: #fff; font-weight: bold;" id="lbl-usuario">Perfil: Cargando...</span>
+            <button onclick="cerrarSesion()" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Salir</button>
+        </div>
     </div>
     <nav>
-        <button class="tab-btn active" onclick="switchTab('tab-nuevo')">Nuevo Ticket</button>
-        <button class="tab-btn" onclick="switchTab('tab-gestion')">Panel de Gestión</button>
-        <button class="tab-btn" onclick="switchTab('tab-reportes')">Reportes</button>
+        <button class="tab-btn active" id="btn-tab-nuevo" onclick="switchTab('tab-nuevo')">Nuevo Ticket</button>
+        <button class="tab-btn" id="btn-tab-gestion" onclick="switchTab('tab-gestion')" style="display: none;">Panel de Gestión</button>
+        <button class="tab-btn" id="btn-tab-reportes" onclick="switchTab('tab-reportes')" style="display: none;">Reportes</button>
     </nav>
 </header>
 
@@ -30,9 +34,11 @@
                 <div class="input-group">
                     <label for="tipo">Tipo de Requerimiento</label>
                     <select id="tipo">
+                        <option value="Emergencia">Emergencia</option>
                         <option value="Mantención">Mantención</option>
                         <option value="Reparación">Reparación</option>
                         <option value="Apoyo Operativo">Apoyo Operativo</option>
+                        <option value="Cambio">Cambio</option>
                         <option value="Otro">Otro</option>
                     </select>
                 </div>
@@ -60,7 +66,15 @@
     <!-- PESTAÑA: PANEL DE GESTIÓN -->
     <div id="tab-gestion" class="tab-content">
         <div class="card">
-            <h2>Tickets Activos</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Lista de Tickets</h2>
+                <select id="filtro-estado" onchange="renderTickets()" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="Todos">Todos</option>
+                    <option value="Abierto">Abierto</option>
+                    <option value="En proceso">En proceso</option>
+                    <option value="Cerrado">Cerrado</option>
+                </select>
+            </div>
             <div id="lista-tickets">
                 <!-- Se llenará vía JS -->
             </div>
@@ -105,35 +119,76 @@
             
             <p><strong>Ubicación:</strong> <span id="modal-ubicacion"></span> | <strong>Tipo:</strong> <span id="modal-tipo"></span></p>
             <p><strong>Descripción:</strong> <span id="modal-desc"></span></p>
+
             <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;">
 
-            <div class="form-row">
-                <div class="input-group">
-                    <label for="modal-estado">Cambiar Estado</label>
-                    <select id="modal-estado">
-                        <option value="Ingresado">Ingresado</option>
-                        <option value="En Revisión">En Revisión</option>
-                        <option value="Asignado">Asignado</option>
-                        <option value="En Ejecución">En Ejecución</option>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="Resuelto">Resuelto</option>
-                    </select>
+            <div id="controles-edicion">
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="modal-estado">Cambiar Estado</label>
+                        <select id="modal-estado">
+                            <option value="Abierto">Abierto</option>
+                            <option value="En proceso">En proceso</option>
+                            <option value="Cerrado">Cerrado</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="modal-responsable">Personal Responsable</label>
+                        <div style="display:flex; gap:5px;">
+                            <select id="modal-responsable" style="flex:1;">
+                                <option value="">-- Sin asignar --</option>
+                            </select>
+                            <button class="btn-secondary" id="btn-add-tecnico" style="padding: 0 10px;" onclick="agregarTecnico()" title="Añadir nuevo técnico al sistema">+</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="modal-responsable">Personal Responsable</label>
-                    <input type="text" id="modal-responsable" placeholder="Nombre del técnico">
-                </div>
-            </div>
 
-            <div class="input-group">
-                <label for="modal-observacion">Añadir Avance u Observación</label>
-                <textarea id="modal-observacion" rows="2" placeholder="Ej: Se inspeccionó y falta repuesto..."></textarea>
-            </div>
-            
-            <div class="input-group">
-                <label for="modal-recursos">Recursos / Materiales Utilizados</label>
-                <input type="text" id="modal-recursos" placeholder="Ej: 1x tubo PVC 40mm, Silicona">
-            </div>
+                <div class="form-row">
+                    <div class="input-group">
+                        <label for="modal-urgencia">Corregir Urgencia (Entrena a la IA)</label>
+                        <select id="modal-urgencia">
+                            <option value="Alta">Alta</option>
+                            <option value="Media">Media</option>
+                            <option value="Baja">Baja</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="modal-observacion">Añadir Avance u Observación</label>
+                        <textarea id="modal-observacion" rows="2" placeholder="Ej: Se inspeccionó y falta repuesto..."></textarea>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="modal-recursos">Recursos / Materiales Utilizados</label>
+                    <input type="text" id="modal-recursos" placeholder="Ej: 1x tubo PVC 40mm, Silicona">
+                </div>
+
+                <div id="seccion-cambio" style="display: none; background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin-top: 0; color: #1f2937; margin-bottom: 15px;">Gestión de Cambio</h4>
+                    <div class="input-group">
+                        <label for="modal-evaluacion">a. Evaluación del Impacto</label>
+                        <textarea id="modal-evaluacion" rows="2" placeholder="Describa el impacto del cambio..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="input-group">
+                            <label for="modal-aceptacion">b. Aceptación del Cambio</label>
+                            <select id="modal-aceptacion">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Aprobado">Aprobado</option>
+                                <option value="Rechazado">Rechazado</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="modal-implementacion">c. Implementar el Cambio</label>
+                            <select id="modal-implementacion">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="En Ejecución">En Ejecución</option>
+                                <option value="Implementado">Implementado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End controles-edicion -->
 
             <div class="history-log" id="modal-historial">
                 <!-- Historial via JS -->
@@ -141,8 +196,8 @@
 
         </div>
         <div class="modal-footer">
-            <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
-            <button onclick="guardarEdicion()">Guardar Cambios</button>
+            <button class="btn-secondary" onclick="cerrarModal()" id="btn-cerrar-modal">Cerrar</button>
+            <button onclick="guardarEdicion()" id="btn-guardar-cambios">Guardar Cambios</button>
         </div>
     </div>
 </div>
@@ -150,7 +205,34 @@
 <script>
 // --- ALMACENAMIENTO (LOCALSTORAGE) ---
 let tickets = JSON.parse(localStorage.getItem('hrr_tickets')) || [];
+let tecnicos = JSON.parse(localStorage.getItem('hrr_tecnicos')) || ["Juan Pérez", "María Gómez", "Carlos Díaz"];
 let ticketActualEditando = null;
+
+function renderTecnicos() {
+    const select = document.getElementById("modal-responsable");
+    if (!select) return;
+    const actual = select.value;
+    select.innerHTML = '<option value="">-- Sin asignar --</option>';
+    tecnicos.forEach(t => {
+        select.innerHTML += `<option value="${t}">${t}</option>`;
+    });
+    if (actual && tecnicos.includes(actual)) select.value = actual;
+}
+
+function agregarTecnico() {
+    const nuevo = prompt("Ingrese el nombre completo del nuevo técnico:");
+    if (nuevo && nuevo.trim() !== "") {
+        const nombre = nuevo.trim();
+        if (!tecnicos.includes(nombre)) {
+            tecnicos.push(nombre);
+            localStorage.setItem('hrr_tecnicos', JSON.stringify(tecnicos));
+            renderTecnicos();
+            document.getElementById("modal-responsable").value = nombre;
+        } else {
+            alert("El técnico ya existe en la lista.");
+        }
+    }
+}
 
 // --- NAVEGACIÓN SPA ---
 function switchTab(tabId) {
@@ -158,15 +240,57 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     
     document.getElementById(tabId).classList.add('active');
-    event.currentTarget.classList.add('active');
-
-    if(tabId === 'tab-gestion') renderTickets();
-    if(tabId === 'tab-reportes') renderReportes();
+    
+    if(tabId === 'tab-nuevo') document.getElementById('btn-tab-nuevo').classList.add('active');
+    if(tabId === 'tab-gestion') {
+        document.getElementById('btn-tab-gestion').classList.add('active');
+        renderTickets();
+    }
+    if(tabId === 'tab-reportes') {
+        document.getElementById('btn-tab-reportes').classList.add('active');
+        renderReportes();
+    }
 }
 
-// --- LOGICA IA URGENCIA ---
+// --- ROLES Y PERMISOS ---
+function verificarSesion() {
+    const rol = localStorage.getItem('hrr_rol');
+    if (!rol) {
+        window.location.href = 'login.html'; // Redirigir al login si no hay sesión
+        return;
+    }
+    
+    const usuario = localStorage.getItem('hrr_usuario') || 'Usuario';
+    document.getElementById("lbl-usuario").textContent = `Perfil: ${rol} (${usuario})`;
+
+    const btnGestion = document.getElementById("btn-tab-gestion");
+    const btnReportes = document.getElementById("btn-tab-reportes");
+    
+    if (rol === "Solicitante") {
+        btnGestion.style.display = "inline-block";
+        btnGestion.textContent = "Mis Solicitudes";
+        document.querySelector("#tab-gestion h2").textContent = "Mis Solicitudes";
+        btnReportes.style.display = "none";
+        switchTab('tab-nuevo'); // Forzar vista segura
+    } else {
+        btnGestion.style.display = "inline-block";
+        btnGestion.textContent = "Panel de Gestión";
+        document.querySelector("#tab-gestion h2").textContent = "Lista de Tickets";
+        btnReportes.style.display = "inline-block";
+    }
+}
+
+function cerrarSesion() {
+    localStorage.removeItem('hrr_rol');
+    localStorage.removeItem('hrr_usuario');
+    window.location.href = 'login.html';
+}
+
+// --- LOGICA IA (DICCIONARIO + APRENDIZAJE AUTOMÁTICO NAIVE BAYES) ---
 function analizarUrgencia(texto) {
     texto = texto.toLowerCase();
+
+    // 1. REGLAS BASE (Diccionario)
     const palabrasAlta = ["urgente", "emergencia", "fuga", "grave", "inmediato", "riesgo", "peligro", "roto", "inundación", "inundacion", "cortocircuito", "accidente", "crítico", "critico", "inoperativo", "caído", "caida", "explosión", "fuego", "incendio", "colapso", "vital", "salud", "riesgo vital"];
     const palabrasMedia = ["problema", "falla", "revisar", "lento", "detalle", "intermitente", "error", "advertencia", "mantenimiento", "ruido", "reparación", "reparacion", "desperfecto", "molestia", "parcial", "sucio", "limpieza"];
 
@@ -176,9 +300,63 @@ function analizarUrgencia(texto) {
     for (let p of palabrasAlta) if (contiene(texto, p) || texto.includes(p)) scoreAlta++;
     for (let p of palabrasMedia) if (contiene(texto, p) || texto.includes(p)) scoreMedia++;
 
-    if (scoreAlta > 0) return "Alta";
-    if (scoreMedia > 0 || texto.length > 200) return "Media";
-    return "Baja";
+    let dictPred = "Baja";
+    if (scoreAlta > 0) dictPred = "Alta";
+    else if (scoreMedia > 0 || texto.length > 200) dictPred = "Media";
+
+    // 2. APRENDIZAJE AUTOMÁTICO (Clasificador Naive Bayes)
+    // Aprende dinámicamente de los tickets almacenados y corregidos por los técnicos
+    if (typeof tickets !== "undefined" && tickets.length >= 3) {
+        let vocabulario = new Set();
+        let counts = { Alta: { total: 0, docs: 0 }, Media: { total: 0, docs: 0 }, Baja: { total: 0, docs: 0 } };
+        let wordCounts = { Alta: {}, Media: {}, Baja: {} };
+        
+        // Fase de Entrenamiento
+        tickets.forEach(t => {
+            const clase = t.urgencia;
+            if (!counts[clase]) return;
+            counts[clase].docs++;
+            const tokens = (t.titulo + " " + (t.descripcion || "")).toLowerCase().match(/\b[a-zñáéíóú]+\b/g) || [];
+            tokens.forEach(word => {
+                if (word.length < 3) return; 
+                vocabulario.add(word);
+                counts[clase].total++;
+                wordCounts[clase][word] = (wordCounts[clase][word] || 0) + 1;
+            });
+        });
+
+        const V = vocabulario.size;
+        const totalDocs = counts.Alta.docs + counts.Media.docs + counts.Baja.docs;
+        
+        // Fase de Predicción
+        if (totalDocs >= 3 && V > 0) {
+            const inputTokens = texto.match(/\b[a-zñáéíóú]+\b/g) || [];
+            let bestClass = dictPred;
+            let bestScore = -Infinity;
+
+            ["Alta", "Media", "Baja"].forEach(clase => {
+                if (counts[clase].docs === 0) return;
+                
+                let score = Math.log(counts[clase].docs / totalDocs); // Log probabilidad previa
+                
+                inputTokens.forEach(word => {
+                    if (word.length >= 3 && vocabulario.has(word)) {
+                        const count = wordCounts[clase][word] || 0;
+                        const pWord = (count + 1) / (counts[clase].total + V); // Suavizado Laplace
+                        score += Math.log(pWord);
+                    }
+                });
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestClass = clase;
+                }
+            });
+            return bestClass; // Retorna la predicción de la IA
+        }
+    }
+
+    return dictPred; // Si no hay datos suficientes, usa las reglas base
 }
 
 // --- CREAR TICKET ---
@@ -188,9 +366,15 @@ function crearTicket() {
     const tipo = document.getElementById("tipo").value;
     const ubicacion = document.getElementById("ubicacion").value.trim();
 
+    if (!descripcion) return alert("El campo Descripción es obligatorio");
     if (!titulo || !ubicacion) return alert("El título y la ubicación son obligatorios.");
 
-    const urgencia = analizarUrgencia(titulo + " " + descripcion);
+    let urgencia = "Media";
+    if (tipo === "Emergencia") urgencia = "Alta";
+    else if (tipo === "Mantención") urgencia = "Media";
+    else if (tipo === "Apoyo Operativo") urgencia = "Baja";
+    else urgencia = analizarUrgencia(titulo + " " + descripcion);
+
     const fecha = new Date().toLocaleString('es-ES');
 
     const nuevoTicket = {
@@ -200,10 +384,14 @@ function crearTicket() {
         tipo,
         ubicacion,
         urgencia,
-        estado: "Ingresado",
+        estado: "Abierto",
         responsable: "",
         recursos: "",
+        evaluacionImpacto: "",
+        aceptacionCambio: "Pendiente",
+        implementacionCambio: "Pendiente",
         fechaCreacion: fecha,
+        creador: localStorage.getItem('hrr_usuario') || 'Desconocido',
         historial: [`${fecha} - Ticket Creado.`]
     };
 
@@ -216,28 +404,43 @@ function crearTicket() {
     document.getElementById("ubicacion").value = "";
 
     alert("Ticket generado con éxito.");
-    switchTab('tab-gestion'); // ir a gestión
     
-    // Activar visualmente la pestaña
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-btn')[1].classList.add('active'); // Botón Gestión
+    // Todos ven el listado ahora, sea panel o mis solicitudes
+    switchTab('tab-gestion'); 
 }
 
 // --- RENDERIZAR LISTA ---
 function renderTickets() {
     const lista = document.getElementById("lista-tickets");
+    const filtro = document.getElementById("filtro-estado") ? document.getElementById("filtro-estado").value : "Todos";
+    const rol = localStorage.getItem('hrr_rol');
+    const usuario = localStorage.getItem('hrr_usuario');
+    
     lista.innerHTML = "";
 
-    if (tickets.length === 0) {
+    let ticketsFiltrados = tickets;
+
+    if (rol === "Solicitante") {
+        ticketsFiltrados = ticketsFiltrados.filter(t => t.creador === usuario);
+    }
+
+    if (filtro !== "Todos") {
+        ticketsFiltrados = ticketsFiltrados.filter(t => t.estado === filtro);
+    }
+
+    if (ticketsFiltrados.length === 0) {
         lista.innerHTML = `<div style="text-align:center; color:#6b7280; padding:20px;">No hay tickets registrados.</div>`;
         return;
     }
 
-    tickets.forEach(t => {
+    // Construir todo el HTML en un string y asignarlo UNA SOLA VEZ
+    // (evita que innerHTML += en loop destruya y recree los elementos en cada iteración)
+    let html = '';
+    ticketsFiltrados.forEach(t => {
         let claseUrg = t.urgencia.toLowerCase();
         let claseEst = t.estado.toLowerCase().replace(" ", "").replace("ó","o").replace("é","e");
         
-        lista.innerHTML += `
+        html += `
         <div class="ticket urg-${claseUrg}" onclick="abrirModal('${t.id}')">
             <div class="ticket-header">
                 <div class="ticket-title">#${t.id} - ${t.titulo}</div>
@@ -253,9 +456,9 @@ function renderTickets() {
                 <span>Ingresado: ${t.fechaCreacion.split(',')[0]}</span>
                 <span>Resp: ${t.responsable || 'No asignado'}</span>
             </div>
-        </div>
-        `;
+        </div>`;
     });
+    lista.innerHTML = html;
 }
 
 // --- MODAL Y EDICIÓN ---
@@ -283,63 +486,144 @@ function abrirModal(id) {
 
     // Form fields
     document.getElementById("modal-estado").value = t.estado;
-    document.getElementById("modal-responsable").value = t.responsable;
+    if (document.getElementById("modal-urgencia")) {
+        document.getElementById("modal-urgencia").value = t.urgencia;
+    }
+    
+    // Rellenar lista de técnicos antes de setear
+    renderTecnicos();
+    if (t.responsable && !tecnicos.includes(t.responsable)) {
+        // Técnico antiguo (fuera de la lista)
+        document.getElementById("modal-responsable").innerHTML += `<option value="${t.responsable}">${t.responsable}</option>`;
+    }
+    document.getElementById("modal-responsable").value = t.responsable || "";
+    
     document.getElementById("modal-observacion").value = "";
     document.getElementById("modal-recursos").value = t.recursos;
+
+    // Gestión de Cambio logic
+    const secCambio = document.getElementById("seccion-cambio");
+    if (t.tipo === "Cambio") {
+        secCambio.style.display = "block";
+        document.getElementById("modal-evaluacion").value = t.evaluacionImpacto || "";
+        document.getElementById("modal-aceptacion").value = t.aceptacionCambio || "Pendiente";
+        document.getElementById("modal-implementacion").value = t.implementacionCambio || "Pendiente";
+    } else {
+        secCambio.style.display = "none";
+    }
 
     // Historial
     const histHtml = t.historial.map(h => `<div class="history-entry">${h}</div>`).join('');
     document.getElementById("modal-historial").innerHTML = histHtml;
 
-    document.getElementById("modal-ticket").classList.add("active");
+    // Vista solo lectura para solicitantes
+    const rol = localStorage.getItem('hrr_rol');
+    const controlesContainer = document.getElementById("controles-edicion");
+    const controles = controlesContainer.querySelectorAll("input, select, textarea");
+
+    if (rol === "Solicitante") {
+        controlesContainer.style.display = "block"; // Asegurarnos que se vea
+        document.getElementById("btn-guardar-cambios").style.display = "none";
+        document.getElementById("btn-add-tecnico").style.display = "none";
+        document.getElementById("btn-cerrar-modal").textContent = "Cerrar";
+        
+        // Desactivar todos los controles para solo lectura
+        controles.forEach(c => c.disabled = true);
+    } else {
+        controlesContainer.style.display = "block";
+        document.getElementById("btn-guardar-cambios").style.display = "inline-block";
+        document.getElementById("btn-add-tecnico").style.display = "inline-block";
+        document.getElementById("btn-cerrar-modal").textContent = "Cancelar";
+        
+        // Activar todos los controles
+        controles.forEach(c => c.disabled = false);
+    }
+
+    const overlay = document.getElementById("modal-ticket");
+    overlay.style.display = "flex"; // Forzar apertura inmediata
+    overlay.classList.add("active");
 }
 
 function cerrarModal() {
-    document.getElementById("modal-ticket").classList.remove("active");
+    const overlay = document.getElementById("modal-ticket");
+    overlay.classList.remove("active");
+    overlay.style.display = "none"; // Forzar cierre inmediato sin depender de CSS
     ticketActualEditando = null;
+    
+    // Siempre re-habilitar controles al cerrar
+    document.querySelectorAll("#controles-edicion input, #controles-edicion select, #controles-edicion textarea")
+        .forEach(c => c.disabled = false);
+    document.getElementById("btn-guardar-cambios").style.display = "inline-block";
+    document.getElementById("btn-add-tecnico").style.display = "inline-block";
 }
 
 function guardarEdicion() {
     const tIndex = tickets.findIndex(x => x.id === ticketActualEditando);
-    if(tIndex === -1) return;
+    if(tIndex === -1) { cerrarModal(); return; }
     
     const t = tickets[tIndex];
     const nEstado = document.getElementById("modal-estado").value;
+    const nUrgencia = document.getElementById("modal-urgencia") ? document.getElementById("modal-urgencia").value : t.urgencia;
     const nResp = document.getElementById("modal-responsable").value.trim();
     const obs = document.getElementById("modal-observacion").value.trim();
     const rec = document.getElementById("modal-recursos").value.trim();
     const fecha = new Date().toLocaleString('es-ES');
 
+    if (nEstado === "Cerrado" && t.estado === "Abierto") {
+        cerrarModal();
+        setTimeout(() => alert("No se puede cerrar un ticket en estado Abierto directamente. Primero cámbialo a 'En proceso'."), 50);
+        return;
+    }
+
     let cambios = [];
     if(t.estado !== nEstado) cambios.push(`Estado pasó a "${nEstado}"`);
+    if(t.urgencia !== nUrgencia) cambios.push(`Urgencia corregida a "${nUrgencia}" (Entrenamiento IA)`);
     if(t.responsable !== nResp && nResp) cambios.push(`Asignado a "${nResp}"`);
     if(t.recursos !== rec && rec) cambios.push(`Recursos actualizados`);
     if(obs) cambios.push(`Nota: ${obs}`);
 
+    if (t.tipo === "Cambio") {
+        const evalImpacto = document.getElementById("modal-evaluacion").value.trim();
+        const aceptacion = document.getElementById("modal-aceptacion").value;
+        const implementacion = document.getElementById("modal-implementacion").value;
+
+        if (t.evaluacionImpacto !== evalImpacto && evalImpacto) cambios.push(`Evaluación de impacto actualizada`);
+        if (t.aceptacionCambio !== aceptacion) cambios.push(`Aceptación: ${aceptacion}`);
+        if (t.implementacionCambio !== implementacion) cambios.push(`Implementación: ${implementacion}`);
+
+        t.evaluacionImpacto = evalImpacto;
+        t.aceptacionCambio = aceptacion;
+        t.implementacionCambio = implementacion;
+    }
+
     if(cambios.length > 0) {
         t.estado = nEstado;
+        t.urgencia = nUrgencia;
         t.responsable = nResp;
         t.recursos = rec;
         t.historial.unshift(`${fecha} - ${cambios.join(' | ')}`); // unshift para ver lo nuevo arriba
         
         localStorage.setItem('hrr_tickets', JSON.stringify(tickets));
-        renderTickets();
     }
+    
+    // Cerrar modal PRIMERO para liberar el overlay, luego actualizar la lista
     cerrarModal();
+    renderTickets();
 }
 
 // --- REPORTES ---
 function renderReportes() {
     document.getElementById("stat-total").textContent = tickets.length;
     
-    const resueltos = tickets.filter(t => t.estado === "Resuelto").length;
+    const resueltos = tickets.filter(t => t.estado === "Cerrado").length;
     document.getElementById("stat-resueltos").textContent = resueltos;
     
-    const enProceso = tickets.filter(t => t.estado === "En Ejecución" || t.estado === "Asignado" || t.estado === "En Revisión").length;
+    const enProceso = tickets.filter(t => t.estado === "En proceso").length;
     document.getElementById("stat-proceso").textContent = enProceso;
 }
 
 // Inicializar
+verificarSesion();
 renderTickets();
 </script>
 
