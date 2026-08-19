@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión - Hospital HRR</title>
+    <title>Iniciar Sesión - Gestión de Tickets</title>
     <link rel="stylesheet" href="styles.css">
     <style>
         body {
@@ -96,8 +96,8 @@
 <body>
 
 <div class="login-card" id="login-view">
-    <h2>Hospital HRR</h2>
-    <p>Sistema de Tickets - Recursos Físicos</p>
+    <h2>Sistema de Tickets</h2>
+    <p>Gestión de Recursos Físicos</p>
 
     <div class="error-msg" id="error-msg">Usuario o contraseña incorrectos.</div>
 
@@ -118,8 +118,8 @@
 
     <div class="hints">
         <strong>Credenciales de prueba:</strong><br><br>
-        • Jefatura/Supervisor:<br> <b>admin</b> / <b>1234</b><br><br>
-        • Enfermería/Solicitante:<br> <b>user</b> / <b>1234</b>
+        • Administrador/Supervisor:<br> <b>admin</b> / <b>1234</b><br><br>
+        • Personal/Solicitante:<br> <b>user</b> / <b>1234</b>
     </div>
 </div>
 
@@ -144,8 +144,8 @@
     <div class="input-group">
         <label for="reg-rol">Perfil Solicitado</label>
         <select id="reg-rol" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; box-sizing: border-box; font-family: inherit;">
-            <option value="Solicitante">Enfermería / Solicitante</option>
-            <option value="Jefatura">Jefatura / Supervisor</option>
+            <option value="Solicitante">Personal / Solicitante</option>
+            <option value="Jefatura">Administrador / Supervisor</option>
         </select>
     </div>
     
@@ -164,7 +164,7 @@
     // Cargar cuentas del localstorage o usar por defecto
     let usuarios = JSON.parse(localStorage.getItem('hrr_cuentas')) || [
         { user: "admin", pass: "1234", rol: "Jefatura", nombre: "Administrador General" },
-        { user: "user", pass: "1234", rol: "Solicitante", nombre: "Enfermera Urgencias" }
+        { user: "user", pass: "1234", rol: "Solicitante", nombre: "Usuario Promedio" }
     ];
 
     let intentos = 0;
