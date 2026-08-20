@@ -30,6 +30,7 @@
     <nav>
         <button class="tab-btn active" id="btn-tab-nuevo" onclick="switchTab('tab-nuevo')">Nuevo Ticket</button>
         <button class="tab-btn" id="btn-tab-gestion" onclick="switchTab('tab-gestion')" style="display: none;">Panel de Gestión</button>
+        <button class="tab-btn" id="btn-tab-inventario" onclick="switchTab('tab-inventario')" style="display: none;">Inventario</button>
         <button class="tab-btn" id="btn-tab-reportes" onclick="switchTab('tab-reportes')" style="display: none;">Reportes</button>
     </nav>
 </header>
@@ -72,6 +73,19 @@
                 <textarea id="descripcion" placeholder="Describe la situación exacta..."></textarea>
             </div>
             
+            <div class="form-row">
+                <div class="input-group">
+                    <label for="material-req">Material Requerido (Opcional)</label>
+                    <select id="material-req">
+                        <option value="">-- Ninguno --</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="cantidad-req">Cantidad</label>
+                    <input type="number" id="cantidad-req" value="1" min="1">
+                </div>
+            </div>
+            
             <button onclick="crearTicket()">Generar Ticket</button>
         </div>
     </div>
@@ -90,6 +104,30 @@
             </div>
             <div id="lista-tickets">
                 <!-- Se llenará vía JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA: INVENTARIO -->
+    <div id="tab-inventario" class="tab-content">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Inventario de Recursos</h2>
+                <button onclick="agregarMaterial()" style="padding: 8px 15px; font-size: 13px;">+ Nuevo Ítem</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ítem / Material</th>
+                            <th>Stock Disponible</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-inventario">
+                        <!-- JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -219,6 +257,12 @@
 // --- ALMACENAMIENTO (LOCALSTORAGE) ---
 let tickets = JSON.parse(localStorage.getItem('hrr_tickets')) || [];
 let tecnicos = JSON.parse(localStorage.getItem('hrr_tecnicos')) || ["Juan Pérez", "María Gómez", "Carlos Díaz"];
+let inventario = JSON.parse(localStorage.getItem('hrr_inventario')) || [
+    { id: 1, nombre: "Tubo PVC 40mm", stock: 10 },
+    { id: 2, nombre: "Silicona Transparente", stock: 5 },
+    { id: 3, nombre: "Ampolleta LED 9W", stock: 20 },
+    { id: 4, nombre: "Cable Eléctrico 1.5mm (m)", stock: 50 }
+];
 let ticketActualEditando = null;
 
 // --- CONFIGURACIÓN DE ESTABLECIMIENTO ---
@@ -283,6 +327,62 @@ function agregarTecnico() {
     }
 }
 
+function renderInventario() {
+    const lista = document.getElementById("lista-inventario");
+    if (!lista) return;
+    lista.innerHTML = "";
+    inventario.forEach(item => {
+        let claseStock = item.stock <= 2 ? 'color: #ef4444; font-weight: bold; text-shadow: 0 0 10px rgba(239,68,68,0.5);' : 'color: #6ee7b7;';
+        lista.innerHTML += `
+            <tr>
+                <td>${item.nombre}</td>
+                <td style="${claseStock}">${item.stock} un.</td>
+                <td>
+                    <button class="action-btn" onclick="ajustarStock(${item.id}, 1)">+1</button>
+                    <button class="action-btn" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3);" onclick="ajustarStock(${item.id}, -1)">-1</button>
+                </td>
+            </tr>
+        `;
+    });
+    actualizarSelectMateriales();
+}
+
+function actualizarSelectMateriales() {
+    const select = document.getElementById("material-req");
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Ninguno --</option>';
+    inventario.forEach(item => {
+        select.innerHTML += `<option value="${item.id}">${item.nombre} (Disponibles: ${item.stock})</option>`;
+    });
+}
+
+function agregarMaterial() {
+    const nombre = prompt("Nombre del nuevo material/ítem:");
+    if (nombre && nombre.trim() !== "") {
+        const stockInicial = parseInt(prompt("Stock inicial:", "0")) || 0;
+        inventario.push({
+            id: Date.now(),
+            nombre: nombre.trim(),
+            stock: stockInicial
+        });
+        guardarInventario();
+    }
+}
+
+function ajustarStock(id, cant) {
+    let item = inventario.find(i => i.id === id);
+    if(item) {
+        item.stock += cant;
+        if(item.stock < 0) item.stock = 0;
+        guardarInventario();
+    }
+}
+
+function guardarInventario() {
+    localStorage.setItem('hrr_inventario', JSON.stringify(inventario));
+    renderInventario();
+}
+
 // --- NAVEGACIÓN SPA ---
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -290,10 +390,17 @@ function switchTab(tabId) {
     
     document.getElementById(tabId).classList.add('active');
     
-    if(tabId === 'tab-nuevo') document.getElementById('btn-tab-nuevo').classList.add('active');
+    if(tabId === 'tab-nuevo') {
+        document.getElementById('btn-tab-nuevo').classList.add('active');
+        actualizarSelectMateriales();
+    }
     if(tabId === 'tab-gestion') {
         document.getElementById('btn-tab-gestion').classList.add('active');
         renderTickets();
+    }
+    if(tabId === 'tab-inventario') {
+        document.getElementById('btn-tab-inventario').classList.add('active');
+        renderInventario();
     }
     if(tabId === 'tab-reportes') {
         document.getElementById('btn-tab-reportes').classList.add('active');
@@ -313,18 +420,21 @@ function verificarSesion() {
     document.getElementById("lbl-usuario").textContent = `Perfil: ${rol} (${usuario})`;
 
     const btnGestion = document.getElementById("btn-tab-gestion");
+    const btnInventario = document.getElementById("btn-tab-inventario");
     const btnReportes = document.getElementById("btn-tab-reportes");
     
     if (rol === "Solicitante") {
         btnGestion.style.display = "inline-block";
         btnGestion.textContent = "Mis Solicitudes";
         document.querySelector("#tab-gestion h2").textContent = "Mis Solicitudes";
+        btnInventario.style.display = "none";
         btnReportes.style.display = "none";
         switchTab('tab-nuevo'); // Forzar vista segura
     } else {
         btnGestion.style.display = "inline-block";
         btnGestion.textContent = "Panel de Gestión";
         document.querySelector("#tab-gestion h2").textContent = "Lista de Tickets";
+        btnInventario.style.display = "inline-block";
         btnReportes.style.display = "inline-block";
     }
 }
@@ -414,9 +524,25 @@ function crearTicket() {
     const descripcion = document.getElementById("descripcion").value.trim();
     const tipo = document.getElementById("tipo").value;
     const ubicacion = document.getElementById("ubicacion").value.trim();
+    
+    const materialId = document.getElementById("material-req") ? document.getElementById("material-req").value : "";
+    const cantidadReq = document.getElementById("cantidad-req") ? parseInt(document.getElementById("cantidad-req").value) || 1 : 1;
 
     if (!descripcion) return alert("El campo Descripción es obligatorio");
     if (!titulo || !ubicacion) return alert("El título y la ubicación son obligatorios.");
+
+    let materialUsado = "";
+    if (materialId) {
+        let item = inventario.find(i => i.id == materialId);
+        if (!item) return alert("Material inválido.");
+        if (item.stock < cantidadReq) {
+            return alert(`❌ OPERACIÓN DENEGADA:\n\nNo hay stock suficiente de "${item.nombre}".\n- Stock actual: ${item.stock}\n- Se requieren: ${cantidadReq}\n\nPor favor solicite abastecimiento antes de crear este ticket.`);
+        }
+        // Descontar stock inmediatamente al crear
+        item.stock -= cantidadReq;
+        materialUsado = `${cantidadReq}x ${item.nombre}`;
+        guardarInventario(); // Guarda y re-renderiza el inventario
+    }
 
     let urgencia = "Media";
     if (tipo === "Emergencia") urgencia = "Alta";
@@ -435,13 +561,13 @@ function crearTicket() {
         urgencia,
         estado: "Abierto",
         responsable: "",
-        recursos: "",
+        recursos: materialUsado,
         evaluacionImpacto: "",
         aceptacionCambio: "Pendiente",
         implementacionCambio: "Pendiente",
         fechaCreacion: fecha,
         creador: localStorage.getItem('hrr_usuario') || 'Desconocido',
-        historial: [`${fecha} - Ticket Creado.`]
+        historial: [`${fecha} - Ticket Creado.` + (materialUsado ? ` (Material reservado: ${materialUsado})` : "")]
     };
 
     tickets.unshift(nuevoTicket);
