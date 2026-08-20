@@ -316,14 +316,28 @@
 
 <script>
 // --- ALMACENAMIENTO (LOCALSTORAGE) ---
-let tickets = JSON.parse(localStorage.getItem('hrr_tickets')) || [];
-let usuariosCuentas = JSON.parse(localStorage.getItem('hrr_cuentas')) || [];
-let inventario = JSON.parse(localStorage.getItem('hrr_inventario')) || [
+let tickets = [];
+let usuariosCuentas = [];
+let inventario = [
     { id: 1, nombre: "Tubo PVC 40mm", stock: 10 },
     { id: 2, nombre: "Silicona Transparente", stock: 5 },
     { id: 3, nombre: "Ampolleta LED 9W", stock: 20 },
     { id: 4, nombre: "Cable Eléctrico 1.5mm (m)", stock: 50 }
 ];
+
+try {
+    let t = JSON.parse(localStorage.getItem('hrr_tickets'));
+    if(Array.isArray(t)) tickets = t;
+    
+    let u = JSON.parse(localStorage.getItem('hrr_cuentas'));
+    if(Array.isArray(u)) usuariosCuentas = u;
+    
+    let i = JSON.parse(localStorage.getItem('hrr_inventario'));
+    if(Array.isArray(i) && i.length > 0) inventario = i;
+} catch(e) {
+    console.error("Error leyendo LocalStorage", e);
+}
+
 let ticketActualEditando = null;
 
 // --- CONFIGURACIÓN DE ESTABLECIMIENTO ---

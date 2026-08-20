@@ -82,9 +82,23 @@
         { user: "tecnico2", pass: "1234", rol: "Técnico", nombre: "María Gómez", telefono: "+56922223333", estadoTecnico: "Ocupado", notaTecnico: "Reparando techo" }
     ];
 
-    let usuarios = JSON.parse(localStorage.getItem('hrr_cuentas'));
-    // Si no existen usuarios o faltan los técnicos nuevos, forzamos la carga de los defaults
-    if (!usuarios || !usuarios.find(u => u.user === 'tecnico1')) {
+    let usuarios = [];
+    try {
+        let parsed = JSON.parse(localStorage.getItem('hrr_cuentas'));
+        if (Array.isArray(parsed)) {
+            usuarios = parsed;
+        }
+    } catch (e) {
+        console.error("Error leyendo hrr_cuentas", e);
+    }
+
+    // Asegurarnos de que existan los técnicos por defecto
+    let tieneTecnico = false;
+    if (usuarios.length > 0) {
+        tieneTecnico = usuarios.some(u => u.user === 'tecnico1');
+    }
+
+    if (!tieneTecnico || usuarios.length === 0) {
         usuarios = defaults;
         localStorage.setItem('hrr_cuentas', JSON.stringify(usuarios));
     }
