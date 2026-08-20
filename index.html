@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Tickets - Recursos Físicos</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -23,6 +24,7 @@
             </div>
             <div style="background: rgba(255,255,255,0.15); padding: 5px 15px; border-radius: 5px; font-size: 14px; display: flex; align-items: center; gap: 10px;">
                 <span style="color: #fff; font-weight: bold;" id="lbl-usuario">Perfil: Cargando...</span>
+                <button onclick="abrirPerfil()" style="background: var(--secondary); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Mi Perfil</button>
                 <button onclick="cerrarSesion()" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">Salir</button>
             </div>
         </div>
@@ -30,6 +32,7 @@
     <nav>
         <button class="tab-btn active" id="btn-tab-nuevo" onclick="switchTab('tab-nuevo')">Nuevo Ticket</button>
         <button class="tab-btn" id="btn-tab-gestion" onclick="switchTab('tab-gestion')" style="display: none;">Panel de Gestión</button>
+        <button class="tab-btn" id="btn-tab-estado" onclick="switchTab('tab-estado')" style="display: none;">Mi Estado</button>
         <button class="tab-btn" id="btn-tab-inventario" onclick="switchTab('tab-inventario')" style="display: none;">Inventario</button>
         <button class="tab-btn" id="btn-tab-reportes" onclick="switchTab('tab-reportes')" style="display: none;">Reportes</button>
     </nav>
@@ -108,6 +111,30 @@
         </div>
     </div>
 
+    <!-- PESTAÑA: MI ESTADO (TECNICOS) -->
+    <div id="tab-estado" class="tab-content">
+        <div class="card">
+            <h2>Panel de Trabajador (Técnico)</h2>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Actualiza tu estado para que Administración sepa tu disponibilidad al asignar tickets.</p>
+            
+            <div class="input-group">
+                <label for="tec-estado">Disponibilidad Actual</label>
+                <select id="tec-estado">
+                    <option value="Disponible">Disponible (Apto para trabajo)</option>
+                    <option value="Ocupado">Ocupado (Trabajando en un ticket)</option>
+                    <option value="Permiso">Permiso / Inactivo (No apto)</option>
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label for="tec-nota">¿Qué estás haciendo? (Nota)</label>
+                <textarea id="tec-nota" placeholder="Ej: Reparando fuga en pabellón central..."></textarea>
+            </div>
+            
+            <button onclick="guardarEstadoTecnico()">Actualizar Mi Estado</button>
+        </div>
+    </div>
+
     <!-- PESTAÑA: INVENTARIO -->
     <div id="tab-inventario" class="tab-content">
         <div class="card">
@@ -136,18 +163,29 @@
     <div id="tab-reportes" class="tab-content">
         <div class="card">
             <h2>Indicadores de Gestión</h2>
-            <div class="stats-grid">
+            <div class="stats-grid" style="margin-bottom: 30px;">
                 <div class="stat-card">
                     <div class="stat-label">Total Ingresados</div>
-                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-value glow-primary" id="stat-total">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">En Ejecución</div>
-                    <div class="stat-value" id="stat-proceso">0</div>
+                    <div class="stat-value" id="stat-proceso" style="color: var(--urgency-media); text-shadow: 0 0 20px var(--urgency-media-glow);">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Resueltos</div>
-                    <div class="stat-value" id="stat-resueltos">0</div>
+                    <div class="stat-value glow-success" id="stat-resueltos">0</div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="card" style="padding: 15px; margin-bottom: 0;">
+                    <h3 style="color: #fff; margin-top: 0; font-size: 16px; text-align: center;">Tickets por Estado</h3>
+                    <canvas id="chart-estados"></canvas>
+                </div>
+                <div class="card" style="padding: 15px; margin-bottom: 0;">
+                    <h3 style="color: #fff; margin-top: 0; font-size: 16px; text-align: center;">Tickets por Urgencia</h3>
+                    <canvas id="chart-urgencias"></canvas>
                 </div>
             </div>
         </div>
@@ -189,7 +227,6 @@
                             <select id="modal-responsable" style="flex:1;">
                                 <option value="">-- Sin asignar --</option>
                             </select>
-                            <button class="btn-secondary" id="btn-add-tecnico" style="padding: 0 10px;" onclick="agregarTecnico()" title="Añadir nuevo técnico al sistema">+</button>
                         </div>
                     </div>
                 </div>
@@ -253,10 +290,34 @@
     </div>
 </div>
 
+<!-- MODAL DE MI PERFIL -->
+<div class="modal-overlay" id="modal-perfil">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h3>Configuración de Perfil</h3>
+            <button class="close-modal" onclick="cerrarModalPerfil()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label for="perfil-nombre">Nombre Completo</label>
+                <input type="text" id="perfil-nombre">
+            </div>
+            <div class="input-group">
+                <label for="perfil-telefono">Número de Celular</label>
+                <input type="text" id="perfil-telefono" placeholder="Ej: +56912345678">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="cerrarModalPerfil()">Cancelar</button>
+            <button onclick="guardarPerfil()">Guardar Perfil</button>
+        </div>
+    </div>
+</div>
+
 <script>
 // --- ALMACENAMIENTO (LOCALSTORAGE) ---
 let tickets = JSON.parse(localStorage.getItem('hrr_tickets')) || [];
-let tecnicos = JSON.parse(localStorage.getItem('hrr_tecnicos')) || ["Juan Pérez", "María Gómez", "Carlos Díaz"];
+let usuariosCuentas = JSON.parse(localStorage.getItem('hrr_cuentas')) || [];
 let inventario = JSON.parse(localStorage.getItem('hrr_inventario')) || [
     { id: 1, nombre: "Tubo PVC 40mm", stock: 10 },
     { id: 2, nombre: "Silicona Transparente", stock: 5 },
@@ -306,24 +367,70 @@ function renderTecnicos() {
     if (!select) return;
     const actual = select.value;
     select.innerHTML = '<option value="">-- Sin asignar --</option>';
-    tecnicos.forEach(t => {
-        select.innerHTML += `<option value="${t}">${t}</option>`;
+    
+    const tecnicosDB = usuariosCuentas.filter(u => u.rol === "Técnico");
+    
+    tecnicosDB.forEach(t => {
+        let estadoLabel = t.estadoTecnico || "Disponible";
+        let color = estadoLabel === "Disponible" ? "🟢" : (estadoLabel === "Ocupado" ? "🔴" : "⚪");
+        select.innerHTML += `<option value="${t.nombre}">${color} ${t.nombre} (${estadoLabel})</option>`;
     });
-    if (actual && tecnicos.includes(actual)) select.value = actual;
+    
+    if (actual) {
+        let encontrado = Array.from(select.options).find(o => o.value === actual);
+        if(!encontrado) select.innerHTML += `<option value="${actual}">${actual}</option>`;
+        select.value = actual;
+    }
 }
 
-function agregarTecnico() {
-    const nuevo = prompt("Ingrese el nombre completo del nuevo técnico:");
-    if (nuevo && nuevo.trim() !== "") {
-        const nombre = nuevo.trim();
-        if (!tecnicos.includes(nombre)) {
-            tecnicos.push(nombre);
-            localStorage.setItem('hrr_tecnicos', JSON.stringify(tecnicos));
-            renderTecnicos();
-            document.getElementById("modal-responsable").value = nombre;
-        } else {
-            alert("El técnico ya existe en la lista.");
-        }
+// --- LOGICA DE PERFIL Y ESTADO TÉCNICO ---
+function abrirPerfil() {
+    const nombreUsuario = localStorage.getItem('hrr_usuario');
+    const cuenta = usuariosCuentas.find(u => u.nombre === nombreUsuario);
+    if(cuenta) {
+        document.getElementById("perfil-nombre").value = cuenta.nombre;
+        document.getElementById("perfil-telefono").value = cuenta.telefono || "";
+    }
+    document.getElementById("modal-perfil").style.display = "flex";
+    document.getElementById("modal-perfil").classList.add("active");
+}
+
+function cerrarModalPerfil() {
+    document.getElementById("modal-perfil").classList.remove("active");
+    document.getElementById("modal-perfil").style.display = "none";
+}
+
+function guardarPerfil() {
+    const nombreUsuario = localStorage.getItem('hrr_usuario');
+    let cuenta = usuariosCuentas.find(u => u.nombre === nombreUsuario);
+    if(cuenta) {
+        cuenta.nombre = document.getElementById("perfil-nombre").value.trim();
+        cuenta.telefono = document.getElementById("perfil-telefono").value.trim();
+        localStorage.setItem('hrr_cuentas', JSON.stringify(usuariosCuentas));
+        localStorage.setItem('hrr_usuario', cuenta.nombre);
+        verificarSesion();
+        alert("Perfil actualizado correctamente.");
+        cerrarModalPerfil();
+    }
+}
+
+function cargarEstadoTecnico() {
+    const nombreUsuario = localStorage.getItem('hrr_usuario');
+    const cuenta = usuariosCuentas.find(u => u.nombre === nombreUsuario);
+    if(cuenta && cuenta.rol === "Técnico") {
+        document.getElementById("tec-estado").value = cuenta.estadoTecnico || "Disponible";
+        document.getElementById("tec-nota").value = cuenta.notaTecnico || "";
+    }
+}
+
+function guardarEstadoTecnico() {
+    const nombreUsuario = localStorage.getItem('hrr_usuario');
+    let cuenta = usuariosCuentas.find(u => u.nombre === nombreUsuario);
+    if(cuenta && cuenta.rol === "Técnico") {
+        cuenta.estadoTecnico = document.getElementById("tec-estado").value;
+        cuenta.notaTecnico = document.getElementById("tec-nota").value.trim();
+        localStorage.setItem('hrr_cuentas', JSON.stringify(usuariosCuentas));
+        alert("Estado actualizado. Administración ahora puede ver tu disponibilidad.");
     }
 }
 
@@ -398,6 +505,10 @@ function switchTab(tabId) {
         document.getElementById('btn-tab-gestion').classList.add('active');
         renderTickets();
     }
+    if(tabId === 'tab-estado') {
+        document.getElementById('btn-tab-estado').classList.add('active');
+        cargarEstadoTecnico();
+    }
     if(tabId === 'tab-inventario') {
         document.getElementById('btn-tab-inventario').classList.add('active');
         renderInventario();
@@ -422,14 +533,25 @@ function verificarSesion() {
     const btnGestion = document.getElementById("btn-tab-gestion");
     const btnInventario = document.getElementById("btn-tab-inventario");
     const btnReportes = document.getElementById("btn-tab-reportes");
+    const btnEstado = document.getElementById("btn-tab-estado");
+    
+    btnGestion.style.display = "none";
+    btnInventario.style.display = "none";
+    btnReportes.style.display = "none";
+    btnEstado.style.display = "none";
     
     if (rol === "Solicitante") {
         btnGestion.style.display = "inline-block";
         btnGestion.textContent = "Mis Solicitudes";
         document.querySelector("#tab-gestion h2").textContent = "Mis Solicitudes";
-        btnInventario.style.display = "none";
-        btnReportes.style.display = "none";
         switchTab('tab-nuevo'); // Forzar vista segura
+    } else if (rol === "Técnico") {
+        btnGestion.style.display = "inline-block";
+        btnGestion.textContent = "Mis Trabajos Asignados";
+        document.querySelector("#tab-gestion h2").textContent = "Tickets Asignados a Mí";
+        btnEstado.style.display = "inline-block";
+        cargarEstadoTecnico();
+        switchTab('tab-estado'); // Vista por defecto para el tecnico
     } else {
         btnGestion.style.display = "inline-block";
         btnGestion.textContent = "Panel de Gestión";
@@ -597,6 +719,8 @@ function renderTickets() {
 
     if (rol === "Solicitante") {
         ticketsFiltrados = ticketsFiltrados.filter(t => t.creador === usuario);
+    } else if (rol === "Técnico") {
+        ticketsFiltrados = ticketsFiltrados.filter(t => t.responsable === usuario);
     }
 
     if (filtro !== "Todos") {
@@ -667,10 +791,6 @@ function abrirModal(id) {
     
     // Rellenar lista de técnicos antes de setear
     renderTecnicos();
-    if (t.responsable && !tecnicos.includes(t.responsable)) {
-        // Técnico antiguo (fuera de la lista)
-        document.getElementById("modal-responsable").innerHTML += `<option value="${t.responsable}">${t.responsable}</option>`;
-    }
     document.getElementById("modal-responsable").value = t.responsable || "";
     
     document.getElementById("modal-observacion").value = "";
@@ -696,18 +816,26 @@ function abrirModal(id) {
     const controlesContainer = document.getElementById("controles-edicion");
     const controles = controlesContainer.querySelectorAll("input, select, textarea");
 
-    if (rol === "Solicitante") {
+    if (rol === "Solicitante" || rol === "Técnico") {
         controlesContainer.style.display = "block"; // Asegurarnos que se vea
         document.getElementById("btn-guardar-cambios").style.display = "none";
-        document.getElementById("btn-add-tecnico").style.display = "none";
+        
         document.getElementById("btn-cerrar-modal").textContent = "Cerrar";
         
         // Desactivar todos los controles para solo lectura
         controles.forEach(c => c.disabled = true);
+        
+        // Excepción: Si es Técnico, puede cambiar el estado, añadir observación y recursos
+        if (rol === "Técnico") {
+            document.getElementById("btn-guardar-cambios").style.display = "inline-block";
+            document.getElementById("modal-estado").disabled = false;
+            document.getElementById("modal-observacion").disabled = false;
+            document.getElementById("modal-recursos").disabled = false;
+        }
     } else {
         controlesContainer.style.display = "block";
         document.getElementById("btn-guardar-cambios").style.display = "inline-block";
-        document.getElementById("btn-add-tecnico").style.display = "inline-block";
+        
         document.getElementById("btn-cerrar-modal").textContent = "Cancelar";
         
         // Activar todos los controles
@@ -729,7 +857,6 @@ function cerrarModal() {
     document.querySelectorAll("#controles-edicion input, #controles-edicion select, #controles-edicion textarea")
         .forEach(c => c.disabled = false);
     document.getElementById("btn-guardar-cambios").style.display = "inline-block";
-    document.getElementById("btn-add-tecnico").style.display = "inline-block";
 }
 
 function guardarEdicion() {
@@ -787,6 +914,9 @@ function guardarEdicion() {
 }
 
 // --- REPORTES ---
+let chartEstadosInst = null;
+let chartUrgenciasInst = null;
+
 function renderReportes() {
     document.getElementById("stat-total").textContent = tickets.length;
     
@@ -795,6 +925,52 @@ function renderReportes() {
     
     const enProceso = tickets.filter(t => t.estado === "En proceso").length;
     document.getElementById("stat-proceso").textContent = enProceso;
+    
+    // Dibujar Gráficos Chart.js
+    const ctxEstados = document.getElementById('chart-estados');
+    const ctxUrgencias = document.getElementById('chart-urgencias');
+    if (!ctxEstados || !ctxUrgencias) return;
+
+    let cantAbierto = tickets.filter(t => t.estado === "Abierto").length;
+    
+    if(chartEstadosInst) chartEstadosInst.destroy();
+    chartEstadosInst = new Chart(ctxEstados, {
+        type: 'doughnut',
+        data: {
+            labels: ['Abierto', 'En proceso', 'Cerrado'],
+            datasets: [{
+                data: [cantAbierto, enProceso, resueltos],
+                backgroundColor: ['#3b82f6', '#a855f7', '#10b981'],
+                borderWidth: 0
+            }]
+        },
+        options: { plugins: { legend: { labels: { color: '#fff' } } } }
+    });
+
+    let cantAlta = tickets.filter(t => t.urgencia === "Alta").length;
+    let cantMedia = tickets.filter(t => t.urgencia === "Media").length;
+    let cantBaja = tickets.filter(t => t.urgencia === "Baja").length;
+
+    if(chartUrgenciasInst) chartUrgenciasInst.destroy();
+    chartUrgenciasInst = new Chart(ctxUrgencias, {
+        type: 'bar',
+        data: {
+            labels: ['Alta', 'Media', 'Baja'],
+            datasets: [{
+                label: 'Tickets',
+                data: [cantAlta, cantMedia, cantBaja],
+                backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                borderRadius: 4
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true, ticks: { color: '#9ca3af', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                x: { ticks: { color: '#9ca3af' }, grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
 }
 
 // Inicializar

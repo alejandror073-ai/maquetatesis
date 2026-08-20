@@ -58,6 +58,7 @@
         <label for="reg-rol">Perfil Solicitado</label>
         <select id="reg-rol" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; box-sizing: border-box; font-family: inherit;">
             <option value="Solicitante">Personal / Solicitante</option>
+            <option value="Técnico">Personal Técnico (Trabajador)</option>
             <option value="Jefatura">Administrador / Supervisor</option>
         </select>
     </div>
@@ -76,8 +77,10 @@
 
     // Cargar cuentas del localstorage o usar por defecto
     let usuarios = JSON.parse(localStorage.getItem('hrr_cuentas')) || [
-        { user: "admin", pass: "1234", rol: "Jefatura", nombre: "Administrador General" },
-        { user: "user", pass: "1234", rol: "Solicitante", nombre: "Usuario Promedio" }
+        { user: "admin", pass: "1234", rol: "Jefatura", nombre: "Administrador General", telefono: "+56912345678" },
+        { user: "user", pass: "1234", rol: "Solicitante", nombre: "Usuario Promedio", telefono: "+56987654321" },
+        { user: "tecnico1", pass: "1234", rol: "Técnico", nombre: "Juan Pérez", telefono: "+56900001111", estadoTecnico: "Disponible", notaTecnico: "En turno de mañana" },
+        { user: "tecnico2", pass: "1234", rol: "Técnico", nombre: "María Gómez", telefono: "+56922223333", estadoTecnico: "Ocupado", notaTecnico: "Reparando techo" }
     ];
 
     let intentos = 0;
@@ -136,7 +139,7 @@
             return;
         }
 
-        usuarios.push({ user, pass, rol, nombre });
+        usuarios.push({ user, pass, rol, nombre, telefono: "", estadoTecnico: "Disponible", notaTecnico: "" });
         localStorage.setItem('hrr_cuentas', JSON.stringify(usuarios));
         
         alert("Cuenta creada con éxito. Ahora puedes iniciar sesión.");
