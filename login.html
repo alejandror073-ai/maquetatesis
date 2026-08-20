@@ -23,7 +23,7 @@
         <input type="password" id="password" placeholder="••••••••">
     </div>
     
-    <button onclick="iniciarSesion()" style="width: 100%; margin-top: 10px;">Ingresar al Sistema</button>
+    <button id="btn-login" onclick="iniciarSesion()" style="width: 100%; margin-top: 10px;">Ingresar al Sistema</button>
 
     <div style="margin-top: 15px; font-size: 14px;">
         ¿No tienes cuenta? <a href="#" onclick="toggleView('register')" style="color: #2563eb; text-decoration: none;">Regístrate aquí</a>
@@ -75,13 +75,19 @@
     localStorage.removeItem('hrr_rol');
     localStorage.removeItem('hrr_usuario');
 
-    // Cargar cuentas del localstorage o usar por defecto
-    let usuarios = JSON.parse(localStorage.getItem('hrr_cuentas')) || [
+    let defaults = [
         { user: "admin", pass: "1234", rol: "Jefatura", nombre: "Administrador General", telefono: "+56912345678" },
         { user: "user", pass: "1234", rol: "Solicitante", nombre: "Usuario Promedio", telefono: "+56987654321" },
         { user: "tecnico1", pass: "1234", rol: "Técnico", nombre: "Juan Pérez", telefono: "+56900001111", estadoTecnico: "Disponible", notaTecnico: "En turno de mañana" },
         { user: "tecnico2", pass: "1234", rol: "Técnico", nombre: "María Gómez", telefono: "+56922223333", estadoTecnico: "Ocupado", notaTecnico: "Reparando techo" }
     ];
+
+    let usuarios = JSON.parse(localStorage.getItem('hrr_cuentas'));
+    // Si no existen usuarios o faltan los técnicos nuevos, forzamos la carga de los defaults
+    if (!usuarios || !usuarios.find(u => u.user === 'tecnico1')) {
+        usuarios = defaults;
+        localStorage.setItem('hrr_cuentas', JSON.stringify(usuarios));
+    }
 
     let intentos = 0;
 
@@ -108,11 +114,11 @@
             errorDiv.style.display = "block";
             if (intentos >= 3) {
                 errorDiv.textContent = "Acceso bloqueado temporalmente por seguridad.";
-                document.querySelector(".login-btn").disabled = true;
+                document.getElementById("btn-login").disabled = true;
                 setTimeout(() => {
                     intentos = 0;
                     errorDiv.style.display = "none";
-                    document.querySelector(".login-btn").disabled = false;
+                    document.getElementById("btn-login").disabled = false;
                 }, 5000); // Bloqueo temporal simulado
             } else {
                 errorDiv.textContent = "Usuario o contraseña incorrectos.";
